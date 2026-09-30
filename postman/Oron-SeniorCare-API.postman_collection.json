@@ -1,0 +1,933 @@
+{
+  "info": {
+    "_postman_id": "oron-seniorcare-api",
+    "name": "Oron SeniorCare API",
+    "description": "Postman collection for the Oron SeniorCare NestJS backend.\n\n**Setup**\n1. Import this collection (and optionally `Oron-SeniorCare-Local.postman_environment.json`).\n2. Set `baseUrl` (default `http://localhost:3000`).\n3. Run **Auth → Login** or **Owner Login** — the test script saves `accessToken` and user scope IDs.\n4. Protected requests use Bearer `{{accessToken}}` automatically.\n\n**Swagger:** `{{baseUrl}}/api`\n\n**Roles:** `OWNER`, `FACILITY_ADMIN`, `BRANCH_ADMIN`, `STAFF`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level Bearer auth; Auth folder requests override with noauth."
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "facilityId", "value": "" },
+    { "key": "branchId", "value": "" },
+    { "key": "residentId", "value": "" },
+    { "key": "staffId", "value": "" },
+    { "key": "alertId", "value": "" },
+    { "key": "taskId", "value": "" },
+    { "key": "carePlanId", "value": "" },
+    { "key": "inviteCode", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Public endpoints — no Bearer token required.",
+      "auth": { "type": "noauth" },
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const saveAuth = () => {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) pm.collectionVariables.set('accessToken', json.access_token);",
+                  "  if (json.user?.id) pm.collectionVariables.set('userId', json.user.id);",
+                  "  if (json.user?.facilityId) pm.collectionVariables.set('facilityId', json.user.facilityId);",
+                  "  if (json.user?.branchId) pm.collectionVariables.set('branchId', json.user.branchId);",
+                  "};",
+                  "if (pm.response.code === 200 || pm.response.code === 201) saveAuth();"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"staff@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Login for Facility Admin, Branch Admin, and Staff."
+          }
+        },
+        {
+          "name": "Owner Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const saveAuth = () => {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) pm.collectionVariables.set('accessToken', json.access_token);",
+                  "  if (json.user?.id) pm.collectionVariables.set('userId', json.user.id);",
+                  "};",
+                  "if (pm.response.code === 200 || pm.response.code === 201) saveAuth();"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/owner/login",
+            "description": "Login for Owner role only."
+          }
+        },
+        {
+          "name": "Verify Invite Code",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inviteCode\": \"{{inviteCode}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/verify-invite"
+          }
+        },
+        {
+          "name": "Set Password (Invite)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inviteCode\": \"{{inviteCode}}\",\n  \"password\": \"NewPassword1!\",\n  \"confirmPassword\": \"NewPassword1!\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/set"
+          }
+        },
+        {
+          "name": "Forgot Password — Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/forgot/request-otp"
+          }
+        },
+        {
+          "name": "Forgot Password — Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/forgot/verify-otp"
+          }
+        },
+        {
+          "name": "Forgot Password — Reset",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\",\n  \"password\": \"NewPassword1!\",\n  \"confirmPassword\": \"NewPassword1!\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/forgot/reset"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "auth": { "type": "noauth" },
+      "item": [
+        {
+          "name": "Root Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@oron.com\",\n  \"password\": \"password123\",\n  \"role\": \"STAFF\",\n  \"facilityId\": \"{{facilityId}}\",\n  \"branchId\": \"{{branchId}}\",\n  \"staffRole\": \"Caregiver\",\n  \"staffStatus\": \"Active\",\n  \"permissions\": [\"View Residents\", \"Edit Vitals\"]\n}"
+            },
+            "url": "{{baseUrl}}/users"
+          }
+        },
+        {
+          "name": "List Users",
+          "request": { "method": "GET", "url": "{{baseUrl}}/users" }
+        },
+        {
+          "name": "List Users by Facility",
+          "request": { "method": "GET", "url": "{{baseUrl}}/users/facility/{{facilityId}}" }
+        },
+        {
+          "name": "List Users by Branch",
+          "request": { "method": "GET", "url": "{{baseUrl}}/users/branch/{{branchId}}" }
+        },
+        {
+          "name": "Get User by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/users/{{userId}}" }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"staffStatus\": \"Active\"\n}"
+            },
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/users/{{userId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Facilities",
+      "item": [
+        {
+          "name": "Create Facility",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Sunrise Senior Care", "type": "text" },
+                { "key": "phone", "value": "+1-555-0100", "type": "text" },
+                { "key": "email", "value": "contact@sunrise.com", "type": "text" },
+                { "key": "type", "value": "Assisted Living", "type": "text" },
+                { "key": "status", "value": "Active", "type": "text" },
+                { "key": "contractStart", "value": "2025-01-01", "type": "text" },
+                { "key": "contractEnd", "value": "2026-12-31", "type": "text" },
+                { "key": "adminFirstName", "value": "Jane", "type": "text" },
+                { "key": "adminLastName", "value": "Admin", "type": "text" },
+                { "key": "adminEmail", "value": "facility.admin@sunrise.com", "type": "text" },
+                { "key": "contractDocument", "type": "file", "src": [], "disabled": true }
+              ]
+            },
+            "url": "{{baseUrl}}/facilities",
+            "description": "OWNER only. Optional PDF upload: `contractDocument`."
+          }
+        },
+        {
+          "name": "List Facilities",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/facilities?page=1&limit=10&search=&status=",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "search", "value": "" },
+                { "key": "status", "value": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Facility by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/facilities/{{facilityId}}" }
+        },
+        {
+          "name": "Update Facility",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sunrise Senior Care Updated\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": "{{baseUrl}}/facilities/{{facilityId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Branches",
+      "item": [
+        {
+          "name": "Create Branch",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"facilityId\": \"{{facilityId}}\",\n  \"name\": \"Downtown Branch\",\n  \"address\": \"123 Main St\",\n  \"phone\": \"+1-555-0200\",\n  \"type\": \"Assisted Living\",\n  \"status\": \"Active\",\n  \"residentLimit\": 50,\n  \"branchAdminFirstName\": \"Bob\",\n  \"branchAdminLastName\": \"Manager\",\n  \"branchAdminEmail\": \"branch.admin@sunrise.com\"\n}"
+            },
+            "url": "{{baseUrl}}/branches"
+          }
+        },
+        {
+          "name": "List Branches",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/branches?page=1&limit=10&search=&status=",
+              "host": ["{{baseUrl}}"],
+              "path": ["branches"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "search", "value": "" },
+                { "key": "status", "value": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Branch by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/branches/{{branchId}}" }
+        },
+        {
+          "name": "Update Branch",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Downtown Branch Updated\",\n  \"residentLimit\": 60\n}"
+            },
+            "url": "{{baseUrl}}/branches/{{branchId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Staff",
+      "item": [
+        {
+          "name": "Create Staff",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": \"{{branchId}}\",\n  \"facilityId\": \"{{facilityId}}\",\n  \"firstName\": \"Emma\",\n  \"lastName\": \"Wilson\",\n  \"email\": \"emma.wilson@sunrise.com\",\n  \"role\": \"Caregiver\",\n  \"status\": \"Active\",\n  \"permissions\": [\"View Residents\", \"Edit Vitals\", \"Manage Tasks\"]\n}"
+            },
+            "url": "{{baseUrl}}/staff"
+          }
+        },
+        {
+          "name": "List Staff",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/staff?page=1&limit=10&search=&branchId={{branchId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "search", "value": "" },
+                { "key": "branchId", "value": "{{branchId}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Staff by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/staff/{{staffId}}" }
+        },
+        {
+          "name": "Update Staff",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Active\",\n  \"permissions\": [\"View Residents\", \"Edit Vitals\"]\n}"
+            },
+            "url": "{{baseUrl}}/staff/{{staffId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Residents",
+      "item": [
+        {
+          "name": "Create Resident",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "branchId", "value": "{{branchId}}", "type": "text" },
+                { "key": "facilityId", "value": "{{facilityId}}", "type": "text" },
+                { "key": "firstName", "value": "Mary", "type": "text" },
+                { "key": "lastName", "value": "Johnson", "type": "text" },
+                { "key": "dob", "value": "1945-06-15", "type": "text" },
+                { "key": "gender", "value": "Female", "type": "text" },
+                { "key": "room", "value": "101A", "type": "text" },
+                { "key": "status", "value": "Active", "type": "text" },
+                { "key": "healthState", "value": "Stable", "type": "text" },
+                { "key": "admissionDate", "value": "2025-03-01", "type": "text" },
+                { "key": "weight", "value": "65", "type": "text" },
+                { "key": "height", "value": "5ft 4in", "type": "text" },
+                {
+                  "key": "emergencyContacts",
+                  "value": "[{\"id\":\"00000000-0000-4000-8000-000000000001\",\"firstName\":\"Tom\",\"lastName\":\"Johnson\",\"phone\":\"+1-555-0300\",\"relation\":\"Son\"}]",
+                  "type": "text"
+                },
+                { "key": "medicalHistory", "value": "Hypertension", "type": "text" },
+                { "key": "allergies", "value": "Penicillin", "type": "text" },
+                { "key": "primaryDiagnosis", "value": "Hypertension", "type": "text" },
+                { "key": "residentPhoto", "type": "file", "src": [], "disabled": true }
+              ]
+            },
+            "url": "{{baseUrl}}/residents",
+            "description": "multipart/form-data. `emergencyContacts` as JSON string."
+          }
+        },
+        {
+          "name": "List Residents",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/residents?page=1&limit=10&search=&status=&healthState=&branchId={{branchId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["residents"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "search", "value": "" },
+                { "key": "status", "value": "" },
+                { "key": "healthState", "value": "" },
+                { "key": "branchId", "value": "{{branchId}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Resident by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/residents/{{residentId}}" }
+        },
+        {
+          "name": "Update Resident",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "room", "value": "102B", "type": "text" },
+                { "key": "status", "value": "Active", "type": "text" },
+                { "key": "residentPhoto", "type": "file", "src": [], "disabled": true }
+              ]
+            },
+            "url": "{{baseUrl}}/residents/{{residentId}}"
+          }
+        },
+        {
+          "name": "Delete Resident",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/residents/{{residentId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Vitals",
+      "item": [
+        {
+          "name": "Record Vital",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"residentId\": \"{{residentId}}\",\n  \"date\": \"2026-05-22T10:00:00.000Z\",\n  \"systolicBP\": 120,\n  \"diastolicBP\": 80,\n  \"heartRate\": 72,\n  \"temperature\": 36.8,\n  \"oxygenSaturation\": 98,\n  \"notes\": \"Routine check\"\n}"
+            },
+            "url": "{{baseUrl}}/vitals"
+          }
+        },
+        {
+          "name": "List Vitals",
+          "request": { "method": "GET", "url": "{{baseUrl}}/vitals" }
+        },
+        {
+          "name": "List Vitals by Resident",
+          "request": { "method": "GET", "url": "{{baseUrl}}/vitals/resident/{{residentId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Alerts",
+      "item": [
+        {
+          "name": "List Alerts",
+          "request": { "method": "GET", "url": "{{baseUrl}}/alerts" }
+        },
+        {
+          "name": "Update Alert Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Read\"\n}"
+            },
+            "url": "{{baseUrl}}/alerts/{{alertId}}/status",
+            "description": "Status: `Unread`, `Read`, or `Resolved`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"residentId\": \"{{residentId}}\",\n  \"branchId\": \"{{branchId}}\",\n  \"facilityId\": \"{{facilityId}}\",\n  \"title\": \"Morning medication\",\n  \"description\": \"Administer morning meds\",\n  \"category\": \"Medication\",\n  \"status\": \"TODO\",\n  \"dueDate\": \"2026-05-22T14:00:00.000Z\",\n  \"assignedToId\": \"{{staffId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/task"
+          }
+        },
+        {
+          "name": "List Tasks",
+          "request": { "method": "GET", "url": "{{baseUrl}}/task" }
+        },
+        {
+          "name": "Get Task by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/task/{{taskId}}" }
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+            },
+            "url": "{{baseUrl}}/task/{{taskId}}",
+            "description": "Status: `TODO`, `IN_PROGRESS`, `DONE`."
+          }
+        },
+        {
+          "name": "Delete Task",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/task/{{taskId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Rules",
+      "item": [
+        {
+          "name": "Create Rule",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Systolic Blood Pressure\",\n  \"vitalType\": \"systolicBP\",\n  \"category\": \"Vitals\",\n  \"thresholds\": {\n    \"normalMin\": 90,\n    \"normalMax\": 140,\n    \"lowThreshold\": 90,\n    \"highThreshold\": 140,\n    \"criticalLow\": 80,\n    \"criticalHigh\": 180,\n    \"unit\": \"mmHg\"\n  },\n  \"isActive\": true,\n  \"description\": \"Monitors systolic blood pressure.\"\n}"
+            },
+            "url": "{{baseUrl}}/rules"
+          }
+        },
+        {
+          "name": "List Rules",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rules" }
+        },
+        {
+          "name": "Get Rule by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rules/:id" }
+        },
+        {
+          "name": "Update Rule",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"isActive\": false\n}" },
+            "url": "{{baseUrl}}/rules/:id"
+          }
+        },
+        {
+          "name": "Delete Rule",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/rules/:id" }
+        }
+      ]
+    },
+    {
+      "name": "Notes",
+      "item": [
+        {
+          "name": "Create Note",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"residentId\": \"{{residentId}}\",\n  \"author\": \"Emma Wilson\",\n  \"content\": \"Resident ate full breakfast.\",\n  \"type\": \"Observation\",\n  \"timestamp\": \"2026-05-22T09:00:00.000Z\"\n}"
+            },
+            "url": "{{baseUrl}}/notes",
+            "description": "type: `Observation`, `Clinical`, or `General`."
+          }
+        },
+        {
+          "name": "List Notes",
+          "request": { "method": "GET", "url": "{{baseUrl}}/notes" }
+        },
+        {
+          "name": "List Notes by Resident",
+          "request": { "method": "GET", "url": "{{baseUrl}}/notes/resident/{{residentId}}" }
+        },
+        {
+          "name": "Get Note by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/notes/:id" }
+        },
+        {
+          "name": "Delete Note",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/notes/:id" }
+        }
+      ]
+    },
+    {
+      "name": "Care Plans",
+      "item": [
+        {
+          "name": "Create Care Plan",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"residentId\": \"{{residentId}}\",\n  \"branchId\": \"{{branchId}}\",\n  \"generatedDate\": \"2026-05-01\",\n  \"reviewDate\": \"2026-06-01\",\n  \"version\": \"1.0\",\n  \"lastReviewDate\": \"2026-05-01\",\n  \"nextReviewDate\": \"2026-06-01\",\n  \"signed\": false,\n  \"medications\": [\n    {\n      \"name\": \"Lisinopril\",\n      \"dosage\": \"10mg\",\n      \"schedule\": \"Once daily\",\n      \"status\": \"Active\"\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/care-plans"
+          }
+        },
+        {
+          "name": "List Care Plans",
+          "request": { "method": "GET", "url": "{{baseUrl}}/care-plans" }
+        },
+        {
+          "name": "List Care Plans by Resident",
+          "request": { "method": "GET", "url": "{{baseUrl}}/care-plans/resident/{{residentId}}" }
+        },
+        {
+          "name": "Get Care Plan by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/care-plans/{{carePlanId}}" }
+        },
+        {
+          "name": "Update Care Plan",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"signed\": true\n}" },
+            "url": "{{baseUrl}}/care-plans/{{carePlanId}}"
+          }
+        },
+        {
+          "name": "Delete Care Plan",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/care-plans/{{carePlanId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Clinical Assessments",
+      "item": [
+        {
+          "name": "Create Clinical Assessment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"residentId\": \"{{residentId}}\",\n  \"conditions\": [\"Hypertension\"],\n  \"allergies\": [\"Penicillin\"],\n  \"adlScores\": {\n    \"bathing\": \"Independent\",\n    \"dressing\": \"Assisted\"\n  },\n  \"mobility\": \"Walker\",\n  \"cognitive\": \"Alert\"\n}"
+            },
+            "url": "{{baseUrl}}/clinical-assessments"
+          }
+        },
+        {
+          "name": "List Clinical Assessments",
+          "request": { "method": "GET", "url": "{{baseUrl}}/clinical-assessments" }
+        },
+        {
+          "name": "List by Resident",
+          "request": { "method": "GET", "url": "{{baseUrl}}/clinical-assessments/resident/{{residentId}}" }
+        },
+        {
+          "name": "Get by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/clinical-assessments/:id" }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"mobility\": \"Wheelchair\"\n}" },
+            "url": "{{baseUrl}}/clinical-assessments/:id"
+          }
+        },
+        {
+          "name": "Delete",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/clinical-assessments/:id" }
+        }
+      ]
+    },
+    {
+      "name": "Goals",
+      "item": [
+        {
+          "name": "Create Goal",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"residentId\": \"{{residentId}}\",\n  \"description\": \"Improve mobility\",\n  \"targetMetric\": \"Walk 50ft\",\n  \"timeframe\": \"30 days\",\n  \"responsibleRole\": \"Caregiver\",\n  \"status\": \"In Progress\"\n}"
+            },
+            "url": "{{baseUrl}}/goals"
+          }
+        },
+        {
+          "name": "List Goals",
+          "request": { "method": "GET", "url": "{{baseUrl}}/goals" }
+        },
+        {
+          "name": "List by Resident",
+          "request": { "method": "GET", "url": "{{baseUrl}}/goals/resident/{{residentId}}" }
+        },
+        {
+          "name": "Get by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/goals/:id" }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Completed\"\n}" },
+            "url": "{{baseUrl}}/goals/:id"
+          }
+        },
+        {
+          "name": "Delete",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/goals/:id" }
+        }
+      ]
+    },
+    {
+      "name": "Interventions",
+      "item": [
+        {
+          "name": "Create Intervention",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"residentId\": \"{{residentId}}\",\n  \"description\": \"Fall prevention protocol\",\n  \"responsibleStaffRole\": \"Caregiver\",\n  \"frequency\": \"Daily\",\n  \"triggerConditions\": \"High fall risk score\",\n  \"effectivenessMetric\": \"Zero falls in 30 days\"\n}"
+            },
+            "url": "{{baseUrl}}/interventions"
+          }
+        },
+        {
+          "name": "List Interventions",
+          "request": { "method": "GET", "url": "{{baseUrl}}/interventions" }
+        },
+        {
+          "name": "List by Resident",
+          "request": { "method": "GET", "url": "{{baseUrl}}/interventions/resident/{{residentId}}" }
+        },
+        {
+          "name": "Get by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/interventions/:id" }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"frequency\": \"Twice daily\"\n}" },
+            "url": "{{baseUrl}}/interventions/:id"
+          }
+        },
+        {
+          "name": "Delete",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/interventions/:id" }
+        }
+      ]
+    },
+    {
+      "name": "Preferences",
+      "item": [
+        {
+          "name": "Create Preference",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"residentId\": \"{{residentId}}\",\n  \"sleepPattern\": \"Early riser\",\n  \"mealPref\": \"Low sodium\",\n  \"communication\": \"Verbal\",\n  \"socialPref\": \"Group activities\",\n  \"familyEngagement\": \"Weekly visits\",\n  \"isNA\": false\n}"
+            },
+            "url": "{{baseUrl}}/preferences"
+          }
+        },
+        {
+          "name": "List Preferences",
+          "request": { "method": "GET", "url": "{{baseUrl}}/preferences" }
+        },
+        {
+          "name": "List by Resident",
+          "request": { "method": "GET", "url": "{{baseUrl}}/preferences/resident/{{residentId}}" }
+        },
+        {
+          "name": "Get by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/preferences/:id" }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"mealPref\": \"Vegetarian\"\n}" },
+            "url": "{{baseUrl}}/preferences/:id"
+          }
+        },
+        {
+          "name": "Delete",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/preferences/:id" }
+        }
+      ]
+    },
+    {
+      "name": "Risk Profiles",
+      "item": [
+        {
+          "name": "Create Risk Profile",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"residentId\": \"{{residentId}}\",\n  \"fallRiskScore\": 45,\n  \"mobilityTrend\": \"Declining\",\n  \"nearFallEvents\": 1,\n  \"vitalsTrend\": \"Stable\",\n  \"narrativeInterpretation\": \"Moderate fall risk.\"\n}"
+            },
+            "url": "{{baseUrl}}/risk-profiles"
+          }
+        },
+        {
+          "name": "List Risk Profiles",
+          "request": { "method": "GET", "url": "{{baseUrl}}/risk-profiles" }
+        },
+        {
+          "name": "List by Resident",
+          "request": { "method": "GET", "url": "{{baseUrl}}/risk-profiles/resident/{{residentId}}" }
+        },
+        {
+          "name": "Get by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/risk-profiles/:id" }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"fallRiskScore\": 55\n}" },
+            "url": "{{baseUrl}}/risk-profiles/:id"
+          }
+        },
+        {
+          "name": "Delete",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/risk-profiles/:id" }
+        }
+      ]
+    },
+    {
+      "name": "Audit Logs",
+      "item": [
+        {
+          "name": "List Audit Logs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/audit-logs?page=1&limit=10&search=&action=&period=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["audit-logs"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "search", "value": "" },
+                { "key": "action", "value": "" },
+                { "key": "period", "value": "30", "description": "7, 30, or all" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboards",
+      "item": [
+        {
+          "name": "Owner Dashboard",
+          "request": { "method": "GET", "url": "{{baseUrl}}/dashboards/owner" }
+        },
+        {
+          "name": "Facility Dashboard",
+          "request": { "method": "GET", "url": "{{baseUrl}}/dashboards/facility" }
+        },
+        {
+          "name": "Branch Dashboard",
+          "request": { "method": "GET", "url": "{{baseUrl}}/dashboards/branch" }
+        },
+        {
+          "name": "Staff Dashboard",
+          "request": { "method": "GET", "url": "{{baseUrl}}/dashboards/staff" }
+        }
+      ]
+    }
+  ]
+}
